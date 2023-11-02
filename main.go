@@ -91,10 +91,8 @@ func main() {
 				defer resp.Body.Close()
 
 				// Check the response status code.
-				if resp.StatusCode == http.StatusOK {
-					// Request was successful.
-					fmt.Printf("Successful login with username: %s, password: %s\n", username, password)
-				}
+				status := fmt.Sprintf("username: %s, password: %s - Status: %d", username, password, resp.StatusCode)
+				fmt.Println(status)
 			}(username, password)
 		}
 	}
